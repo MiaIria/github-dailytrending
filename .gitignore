@@ -1,0 +1,18 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+
+# ---- Skill runtime cache ----
+# 脚本运行产物（fetch + render 输出的中间 JSON / 临时文件）
+.gdt_cache/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
