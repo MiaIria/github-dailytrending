@@ -47,10 +47,12 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch
 ### Step 2 — 调用抓取脚本
 
 ```bash
-python "C:\Users\26250\.claude\skills\github-dailytrending\scripts\fetch_trending.py" \
+python "$HOME/.claude/skills/github-dailytrending/scripts/fetch_trending.py" \
   --since <since> [--language <lang>] --limit <limit> \
   --output "<project_root>/.gdt_cache/github_trending_<YYYY-MM-DD>.json"
 ```
+
+> 注：脚本路径以 `$HOME` 为锚点（Git Bash 写法），跨 Windows 用户迁移不需要改 skill；如在 cmd/PowerShell 调用，把 `$HOME` 换成 `%USERPROFILE%` 即可。
 
 `<project_root>` = 当前工作目录（用户调用本 skill 时所在的项目根）。
 
@@ -152,7 +154,7 @@ python "C:\Users\26250\.claude\skills\github-dailytrending\scripts\fetch_trendin
 ### Step 6 — 调用合并渲染脚本
 
 ```bash
-python "C:\Users\26250\.claude\skills\github-dailytrending\scripts\render_outputs.py" \
+python "$HOME/.claude/skills/github-dailytrending/scripts/render_outputs.py" \
   --input "<含拆解字段的JSON路径>" \
   --project-root "<project_root>" \
   --theme github-blue
@@ -167,23 +169,28 @@ python "C:\Users\26250\.claude\skills\github-dailytrending\scripts\render_output
 
 ### Step 7 — 生成趋势总结文案
 
-Claude 基于当日所有仓库的方向/技术栈/趋势，写一段总结文案，落到：
+Claude **扮演"科技新闻编辑"角色**，把每日抓取的 trending 仓库当作今天的科技新闻通讯来写，落到：
 
 ```
 <project_root>/github-trending-results/<YYYY-MM-DD>/summary.md
 ```
 
-**硬性长度约束（不可违反）**：
-- 全文（标题、正文、末尾元信息行）合计 **≤ 500 个字符**（按 `len(text)` 计，标点、空格、换行全部计入，超限直接重写不要交付）
-- 默认目标长度 300-450 字符；只有仓库数 ≥ 15 或当日出现明显新趋势主题时才允许逼近 500
-- 写入文件前必须自行检查一遍字符数；超过 500 必须删减/重写再交付
+**写作框架（硬性约束）**：
 
-文案要求：
-- 体现当日技术趋势（如"AI Agent 工具集中爆发"、"系统编程语言复兴"）
-- 举一个具体仓库为例（写名 + 一句话点出特色）
-- 用中文，行文流畅，不要堆砌套话
-- 开头用 `## 今日 GitHub 趋势速览` 标题
-- 末尾用 `> 抓取于 YYYY-MM-DD · since=<since> · language=<lang>` 标注元信息
+1. **标题**：固定 `## 今日 GitHub 趋势速览`。
+2. **结构**：只写两个二级标题小节，**结构固定，不允许增加或减少**：
+   - `### 今日趋势总结`：用 2-3 句话概括当日 GitHub 趋势的整体面貌与共同方向。
+   - `### 今日新动向`：用 2-3 句话点出今日与昨日/近期相比新出现的变化、技术拐点或信号。
+3. **长度**：整篇 summary.md **不超过 200 字**(不含元信息行)。
+4. **语言风格（言简意赅）**：
+   - **中文为主**,尽量少用英文术语。能用中文表述(如特殊常见并且名称较短的"智能体"、"编码工具"、"本地推理"、"上下文管理"、"技能集")可以使用英文(如 `Agent`、`Prompt`、`RAG`、`LLM`、`Skills`)。
+   - 仓库名作为纯标识符可以保留(`owner/repo` 形式),人名/项目名在不影响理解时省略,避免一句话堆叠三个以上英文专名。
+   - 避免空话、套话、"根据 README 所述"等填充语,避免 `##tag` 关键词堆叠开头。
+5. **仓库举例规则**：
+   - **举例仓库数量严格 ≤ 3 个**,按对当日主线代表性最强排序选择。
+   - 优先意译仓库的定位与差异化,而非堆叠英文专名。
+   - 不允许在正文里以列表形式逐个介绍仓库。
+6. **元信息**：末尾用 `> 抓取于 YYYY-MM-DD · since=<since> · language=<lang>` 单独成行标注。
 
 ### Step 8 — 输出交付清单
 

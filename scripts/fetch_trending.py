@@ -25,7 +25,6 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from html import escape as _html_escape_re_unused  # noqa: F401  (placeholder; we use re.sub below)
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Optional
