@@ -1,17 +1,18 @@
 # github-dailytrending
 
-> A Claude Code Skill that auto-archives GitHub Trending repos into a single mobile HTML, a Markdown knowledge base, and a 500-char daily trend digest.
+> A self-evolving Claude Code Skill that auto-archives GitHub Trending repos into a single mobile HTML, a Markdown knowledge base, and a 200-char daily trend digest — **with cross-day comparison that learns from your history**.
 
-抓取 GitHub Trending 今日热门仓库，按日期归档为一份**移动端单页 HTML** + 一份**结构化知识库 Markdown** + 一段 **≤500 字符**的趋势速览。
+抓取 GitHub Trending 今日热门仓库，按日期归档为一份**移动端单页 HTML** + 一份**结构化知识库 Markdown** + 一段 **≤200 字**的趋势速览。**自带自进化机制**：每次执行前先扫描 `./github-trending-knowledge/` 历史归档做跨日对比，让总结越用越聪明。
 
 ---
 
 ## ✨ 核心特性
 
+- 🧠 **自进化机制（独有）** — 每次执行前扫描历史归档做跨日对比，`summary.md` 必须包含至少 1 条具体跨日对比事实（如"某某仓库连续两日霸榜后今日被 X 取代"），越用越聪明
 - 📱 **单页移动端 HTML** — 420px 宽，所有仓库一屏看完，深色 / 浅色主题可切换
 - 📚 **合并知识库 Markdown** — 一日一份，仓库按 rank 从高到低统一归档
 - ⚡ **Claude 自动跑全流程** — 抓数据、拆 README、生成总结、零手动复制
-- 📏 **硬约束：summary ≤500 字符** — 杜绝长篇大论，专注当日信号
+- 📏 **硬约束：summary ≤200 字** + 含跨日对比事实 — 杜绝空话与长篇大论，专注当日信号
 - 🔌 **零外部依赖** — 内联 SVG / 内联主题 CSS，无 CDN、无外部字体、无外部脚本
 
 ---
@@ -73,20 +74,23 @@ cp -r github-dailytrending ~/.claude/skills/
 
 ---
 
-## 🧩 8 步工作流
+## 🧩 9 步工作流（含自进化）
 
 | # | 步骤 | 实现 |
 |---|---|---|
+| 0 | **跨日对比（自进化机制）** — 扫描 `./github-trending-knowledge/` 昨日归档，识别#1 易主 / 新上榜 / 落榜 / 跃迁 | SKILL 内置 |
 | 1 | 解析参数 | SKILL 内置 |
 | 2 | 抓 trending 页 + README | `scripts/fetch_trending.py` |
 | 3 | 校验 JSON 字段 | Claude 自己来 |
 | 4 | 拆解每个仓库为 5 个中文字段 | Claude 自己来 |
 | 5 | 写入合并 Markdown | Claude 自己来 |
 | 6 | 渲染单页 HTML | `scripts/render_outputs.py` |
-| 7 | 生成 ≤500 字符总结 | Claude 自己来 |
+| 7 | **生成 ≤200 字总结 + 强制含跨日对比事实** | Claude 自己来 |
 | 8 | 输出交付清单 | SKILL 内置 |
 
 完整规范见 **[`SKILL.md`](./SKILL.md)**。
+
+> **自进化闭环**：今日归档 → 落地到 `github-trending-knowledge/<YYYY-MM-DD>/` → 供下次 Step 0 读取 → 形成"读历史 → 写今日 → 沉淀历史 → 供下次读"的反馈环。
 
 ---
 
@@ -94,7 +98,7 @@ cp -r github-dailytrending ~/.claude/skills/
 
 ```text
 github-dailytrending/
-├── SKILL.md                       # Skill 入口（Claude 读它）
+├── SKILL.md                       # Skill 入口（Claude 读它，含 9 步工作流）
 ├── LICENSE                        # MIT
 ├── README.md                      # 本文件
 ├── .gitignore
@@ -116,7 +120,11 @@ github-dailytrending/
 2. **新字段**：在 `references/data-contract.md` 加字段，skill 自动接入
 3. **新筛选维度**：`language=javascript?type=repositories` 等 trending 高级参数
 
-⚠️ **请保持 summary ≤500 字符的硬约束**——这是 skill 的核心差异化，请勿放宽。
+⚠️ **请保持以下硬约束**——这是 skill 的核心差异化，请勿放宽：
+
+- summary ≤ **200 字**（含元信息行除外）
+- `### 今日新动向` 必须含至少 1 条具体跨日对比事实，且带 `owner/repo` 仓库名
+- 不得在 final 交付物（含 `summary.md` / `index.html` / `github-trending.md`）中泄露 Step 0 跨日对比备忘
 
 ---
 
