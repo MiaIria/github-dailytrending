@@ -1,8 +1,8 @@
 ---
 name: github-dailytrending
-description: "抓取 GitHub Trending 全语言/全开发者今日热门仓库，按日期归档到当前项目目录；每日全部仓库合并到一份手机端 HTML（results/<日期>/index.html）和一份知识库 Markdown（knowledge/<日期>/github-trending.md），并产出当日趋势总结文案。仓库在 HTML / Markdown 中均按热度（rank）从上到下排列。Use when user says '/github-trending', '今日 GitHub 热榜', '每日 GitHub 热门', '归档今天的 GitHub trending', 'GitHub 今日热门仓库', 或任何 '抓 GitHub trending 仓库并归档' 的请求。"
+description: "抓取 GitHub Trending 全语言/全开发者今日热门仓库，按日期归档到当前项目目录；每日全部仓库合并到一份手机端 HTML（results/<日期>/index.html）和一份知识库 Markdown（knowledge/<日期>/github-trending.md），并产出当日趋势总结文案。仓库在 HTML / Markdown 中均按热度（rank）从上到下排列。**自带自进化机制：每次执行前都会先扫描 ./github-trending-knowledge/ 历史归档做跨日对比，让总结越用越聪明。** Use when user says '/github-trending', '今日 GitHub 热榜', '每日 GitHub 热门', '归档今天的 GitHub trending', 'GitHub 今日热门仓库', 或任何 '抓 GitHub trending 仓库并归档' 的请求。"
 argument-hint: "[since=daily|weekly|monthly] [language] [limit=20]"
-version: "0.2.0"
+version: "0.3.0"
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch
 ---
@@ -38,7 +38,42 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch
 
 ---
 
-## 工作流（8 步，每步必须执行）
+## 工作流（9 步，每步必须执行；Step 0 自进化机制不可跳过）
+
+### Step 0 — 跨日对比（自进化机制 · 必做）
+
+**触发时机**：早于 Step 1 解析参数之前。本步是让 skill 越用越聪明的核心机制，不可省略。
+
+**为什么要做这一步**：
+
+summarize 一日趋势时，"今日新动向"如果只写"AI Agent 全栈继续火热"这类无对比的空话，对用户毫无价值。**只有把今日 Top 5 与前日 Top 5 摆在一起对比，才有可能识别出"谁登顶/让位"、"谁新上榜/落榜"、"谁连续霸榜"等真实信号**——这些信号需要历史归档才能观察到。本 skill 通过 ./github-trending-knowledge/ 目录累积历史归档，正是为了让这一步有数据可读。
+
+**具体动作**：
+
+1. 用 `Glob` 列出 `<project_root>/github-trending-knowledge/*/github-trending.md` 全部历史归档。
+2. 用 `Read` 读取**最近 1 天**（即昨日）的归档（即按 `YYYY-MM-DD` 排序后取最新一份日期），从其中的 `# owner/repo` 标题顺序提取 Top 5 仓库 `full_name`。
+3. 把昨日 Top 5 与今日即将抓取的 Top 5 做对比，识别：
+   - **易主**：昨日 #1 今日是否被取代（连续霸榜 N 天后让位 = 强信号）
+   - **新上榜**：今日 Top 5 中昨日未在 Top 5 的仓库
+   - **落榜**：昨日 Top 5 今日跌出 Top 5
+   - **排名跃迁**：同一仓库在 Top 5 内排名大幅变化
+4. 把对比结果以 `### 跨日对比备忘` 形式记在 Step 0 末尾（仅本对话内参考，最后不要写进交付物），例如：
+   ```
+   ### 跨日对比备忘
+   - 昨日 Top 5: [A, B, C, D, E]
+   - 今日 Top 5: [X, A, C, F, G]
+   - 易主信号: 榜首从 A 变成 X（A 连续两日霸榜后让位）
+   - 新上榜: X, F, G
+   - 落榜: B, D, E
+   ```
+5. **该备忘必须作为 Step 7 写 summary.md "今日新动向" 小节时的硬输入**——必须至少在"今日新动向"中写出一条具体的跨日对比事实（带 `owner/repo` 仓库名），不允许只写空话。
+6. 如果 `<project_root>/github-trending-knowledge/` 目录不存在或没有任何历史归档（新项目首次运行），Step 0 退化为：通过脚本 pipeline 旁路记录今日 Top 5 即可，跳过对比，并在 Step 7 中注明"无历史归档可对比"。
+
+**硬性约束**：
+
+- 不允许跳过 Step 0 直接抓取 trending。
+- 不允许把"跨日对比备忘"污染到最终交付物（HTML / Markdown / summary.md）。
+- 如果昨日归档不存在但前几日存在，至少对比近期 Top 5 趋势作为参考。
 
 ### Step 1 — 解析参数
 
@@ -180,7 +215,7 @@ Claude **扮演"科技新闻编辑"角色**，把每日抓取的 trending 仓库
 1. **标题**：固定 `## 今日 GitHub 趋势速览`。
 2. **结构**：只写两个二级标题小节，**结构固定，不允许增加或减少**：
    - `### 今日趋势总结`：用 2-3 句话概括当日 GitHub 趋势的整体面貌与共同方向。
-   - `### 今日新动向`：用 2-3 句话点出今日与昨日/近期相比新出现的变化、技术拐点或信号。
+   - `### 今日新动向`：用 2-3 句话点出今日与昨日/近期相比新出现的变化、技术拐点或信号。**必须至少包含 1 条具体的跨日对比事实**（如"某某仓库连续 N 日 #1 后今日被 X 取代"或"新上榜 Y"），并使用具体仓库名（`owner/repo` 形式）——这是 Step 0 跨日对比机制的硬性产物，不允许只写"AI 全栈继续火热"等空话。
 3. **长度**：整篇 summary.md **不超过 200 字**(不含元信息行)。
 4. **语言风格（言简意赅）**：
    - **中文为主**,尽量少用英文术语。能用中文表述(如特殊常见并且名称较短的"智能体"、"编码工具"、"本地推理"、"上下文管理"、"技能集")可以使用英文(如 `Agent`、`Prompt`、`RAG`、`LLM`、`Skills`)。
@@ -249,7 +284,8 @@ GitHub Trending 公开页面**未观察到**反爬机制，普通 UA 即可。�
 
 - ❌ 定时调度（cron/Windows 计划任务）— 手动调用
 - ❌ 邮件 / 飞书 / Slack 推送
-- ❌ 历史趋势对比 / 跨日 diff
+- ❌ 跨日趋势的机器可读 diff（JSON/stat） — 当前仅在 summary.md 中以自然语言呈现
 - ❌ 国际化（i18n）— 当前只生成中文
 - ❌ 多个主题切换 UI（仅 github-blue，参数预留）
 - ❌ 按仓库拆分的独立 HTML / Markdown 文件 —— 当前产出已全部合并
+- ✅ **跨日对比（自进化机制已完成）**——通过 Step 0 扫描历史归档驱动，使用 ./github-trending-knowledge/ 作为唯一历史数据源。
