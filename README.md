@@ -1,8 +1,8 @@
 # github-dailytrending
 
-> A self-evolving Claude Code Skill that auto-archives GitHub Trending repos into a single mobile HTML, a Markdown knowledge base, and a 200-char daily trend digest — **with cross-day comparison that learns from your history**.
+> A self-evolving Claude Code Skill that auto-archives GitHub Trending repos into a single mobile HTML, a Markdown knowledge base, and a 300-char daily trend digest — **with cross-day comparison that learns from your history**.
 
-抓取 GitHub Trending 今日热门仓库，按日期归档为一份**移动端单页 HTML** + 一份**结构化知识库 Markdown** + 一段 **≤200 字**的趋势速览。**自带自进化机制**：每次执行前先扫描 `./github-trending-knowledge/` 历史归档做跨日对比，让总结越用越聪明。
+抓取 GitHub Trending 今日热门仓库，按日期归档为一份**移动端单页 HTML** + 一份**结构化知识库 Markdown** + 一段 **≤300 字**的趋势速览。**自带自进化机制**：每次执行前先扫描 `./github-trending-knowledge/` 历史归档做跨日对比（窗口为昨日 + 前日 2 天，识别"近 3 天未上榜、今日首次上榜"的真·新面孔仓库），让总结越用越聪明。
 
 ---
 
@@ -12,7 +12,7 @@
 - 📱 **单页移动端 HTML** — 420px 宽，所有仓库一屏看完，深色 / 浅色主题可切换
 - 📚 **合并知识库 Markdown** — 一日一份，仓库按 rank 从高到低统一归档
 - ⚡ **Claude 自动跑全流程** — 抓数据、拆 README、生成总结、零手动复制
-- 📏 **硬约束：summary ≤200 字** + 含跨日对比事实 — 杜绝空话与长篇大论，专注当日信号
+- 📏 **硬约束：summary ≤300 字** + 含跨日对比事实 + Top 5 新面孔一句话介绍（≤3 个、同方向合并）— 杜绝空话与长篇大论，专注当日信号
 - 🔌 **零外部依赖** — 内联 SVG / 内联主题 CSS，无 CDN、无外部字体、无外部脚本
 
 ---
@@ -78,14 +78,14 @@ cp -r github-dailytrending ~/.claude/skills/
 
 | # | 步骤 | 实现 |
 |---|---|---|
-| 0 | **跨日对比（自进化机制）** — 扫描 `./github-trending-knowledge/` 昨日归档，识别#1 易主 / 新上榜 / 落榜 / 跃迁 | SKILL 内置 |
+| 0 | **跨日对比（自进化机制）** — 扫描 `./github-trending-knowledge/` 昨日 + 前日归档，识别 #1 易主 / 落榜 / 跃迁 + **真·新面孔仓库**（近 3 天未上榜、今日首次上榜；与名次无关） | SKILL 内置 |
 | 1 | 解析参数 | SKILL 内置 |
 | 2 | 抓 trending 页 + README | `scripts/fetch_trending.py` |
 | 3 | 校验 JSON 字段 | Claude 自己来 |
 | 4 | 拆解每个仓库为 5 个中文字段 | Claude 自己来 |
 | 5 | 写入合并 Markdown | Claude 自己来 |
 | 6 | 渲染单页 HTML | `scripts/render_outputs.py` |
-| 7 | **生成 ≤200 字总结 + 强制含跨日对比事实** | Claude 自己来 |
+| 7 | **生成 ≤300 字总结 + 强制含跨日对比事实 + Top 5 新面孔一句话介绍（≤3 个、同方向合并）** | Claude 自己来 |
 | 8 | 输出交付清单 | SKILL 内置 |
 
 完整规范见 **[`SKILL.md`](./SKILL.md)**。
@@ -122,8 +122,9 @@ github-dailytrending/
 
 ⚠️ **请保持以下硬约束**——这是 skill 的核心差异化，请勿放宽：
 
-- summary ≤ **200 字**（含元信息行除外）
+- summary ≤ **300 字**（含元信息行除外）
 - `### 今日新动向` 必须含至少 1 条具体跨日对比事实，且带 `owner/repo` 仓库名
+- `### 今日新动向` 必须为今日的"新面孔仓库"（Step 0 严格定义：近 3 天未上榜、今日首次上榜；与名次无关）补一句"作用 + 差异化特征"的一句话介绍；新面孔介绍 ≤3 个、同方向需合并概括（与上方 ≤3 仓库举例配额互不冲突）
 - 不得在 final 交付物（含 `summary.md` / `index.html` / `github-trending.md`）中泄露 Step 0 跨日对比备忘
 
 ---
